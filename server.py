@@ -4,12 +4,6 @@ import sys
 import queue
 import struct
 
-def next_free_id(usedlist):
-	for i in usedlist:
-		if usedlist[i] == 0:
-			usedlist[i] == 1			
-			return i
-
 ## main function ##
 def main():
 	port = sys.argv[1]
@@ -79,29 +73,34 @@ def main():
 					# 3 = OI #
 					if msg_type == 3:
 						# ok #						
-						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', next_id) 
+						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', next_id) + struct.pack('!H', seq_num)
 						message_queues[s].put(msg) 
 						clients[next_id] = s
 						next_id = next_id + 1
+						'''if nex_id >= 65535:
+							next_id = 0
+						if clients[next_id] != 0:
+							next_id = next_id + 1
+						if clients[next_id] == 0'''
 
 					# 4 = FLW #
 					if msg_type == 4:
 						# ok #
-						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', next_id) 
+						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(msg) 
 						# remove s #						
 						inputs.remove(s)
 						if s in outputs:
 							outputs.remove(s)
 						s.close()
+						del clients[origem]
 					
 					# 5 = MSG #
 					if msg_type == 5:					
 						aux = s.recv(2)
 						size = struct.unpack('!H', aux)[0]
-						payload = s.recv(size)
+						payload = s.recv(size) # string com encode()
 							
-						print('recebi: ', payload)
 						# se o destino = 0 , SEND broadcast
 						if destino == 0:
 							print('broadcast')
@@ -111,27 +110,29 @@ def main():
 									message_queues[ppl].put(message)	
 								else:
 									# SEND OK(origem)
-									msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) 
+									msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 									message_queues[ppl].put(msg) 
 								
 						# se o destino nao existe, SEND ERRO(origem)
 						elif destino not in clients:
 							print('erro')
-							message = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) 
+							message = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(message)
-						
 						# se nao e nada disso, SEND(destino) 
 						else:
 							print('unicast')
-							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', size) + payload
-							message_queues[destino].put(message)
+							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
+							message_queues[clients[destino]].put(message)
 							# SEND OK(origem)
-							msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) 
+							msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(msg) 
 								
 					# 6 = CREQ #
 					if msg_type == 6:
 						print('CREQ')
+						length = len(clients)
+						message = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
+						message_queues[s].put(message)
 						# SEND CLIST(origem)
 					
 				else:
