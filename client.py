@@ -32,8 +32,8 @@ def main():
 		ok = sock.recv(2)
 		myid = struct.unpack('!H', ok)[0]
 		print('\nmy id is: ',myid)
-		'''ok = sock.recv(2)
-		numseq = struct.unpack('!H', ok)[0]''' # recebe o numero de sequencia
+		ok = sock.recv(2)
+		numseq = struct.unpack('!H', ok)[0] # recebe o numero de sequencia
 
 	print('Escolha uma opcao: ')
 	print('[1] Enviar uma mensagem\n' + \
@@ -46,29 +46,38 @@ def main():
 		ready_to_read, ready_to_write, error_sock = select.select(socket_list , [], [])
 
 		for i in ready_to_read:
+			#print('IIIII ',i)
 			if i == sock: # mensagem recebida do servidor
-				msg = sock.recv(2)
+				print('RECEBI DO SERVIDOR')
+				msg = i.recv(2)
 				msg_type = struct.unpack('!H', msg)[0]
-				if not msg:
-					sys.exit()
+				print('MENSAGEM TIPO ',msg_type)
+				#if not msg:
+				#	sys.exit()
+				if msg_type == 1: # recebeu OK
+					print('ENTROU NO OK')
+					msg = i.recv(4)
+					msg = i.recv(2)
 				elif msg_type == 5:
-					msg = sock.recv(2)
+					print('ENTOU NA MSG')
+					msg = i.recv(2)
 					idfrom = struct.unpack('!H', msg)[0]
-					msg = sock.recv(2)
+					msg = i.recv(2)
 					dst = struct.unpack('!H', msg)[0]
 					if myid == dst:
 						print('ta certo')
-					msg = sock.recv(2) # recebe o numero de sequencia
-					msg = sock.recv(2)
+					msg = i.recv(2) # recebe o numero de sequencia
+					msg = i.recv(2)
 					#length = struct.unpack('!H', msg)[0]
 					length = msg
-					msg = sock.recv(length)
+					msg = i.recv(length)
 					#mensagem = struct.unpack('!H', msg)[0]
 					mensagem = msg.decode()
 					print('Mensagem de ', idfrom)
 					print(mensagem)
 
 			else: # mensagem do teclado
+				print('RECEBI DO TECLADO')
 				cmd = input()
 				if cmd == '1': # envia mensagem
 					print('entrou 1')
@@ -89,12 +98,12 @@ def main():
 					if msg_type == 1: # OK
 						print('OK')
 						aux = sock.recv(4)
-						'''aux = sock.recv(2)''' #recebe numero de sequencia
+						aux = sock.recv(2) #recebe numero de sequencia
 
 					elif msg_type == 2:
 						print('ERRO. NAO EXISTE ESSE CLIENTE')
 						aux = sock.recv(4)
-						'''aux = sock.recv(2)''' #recebe numero de sequencia
+						aux = sock.recv(2) #recebe numero de sequencia
 
 				elif cmd == '2': # pede a lista de clientes
 					print('entrou 2')
@@ -120,6 +129,8 @@ def main():
 						aux = sock.recv(4)
 						sock.close()
 						sys.exit()''' #essa parte ta dando erro
+
+
 
 
 
