@@ -4,7 +4,7 @@ import socket
 import sys
 import struct
 import select
-
+#import pickle
 
 def main():
 	# Create TCP/IP socket
@@ -28,12 +28,12 @@ def main():
 	if msg_type == 1:
 		ok = sock.recv(2)
 		idfrom = struct.unpack('!H', ok)[0]
-		print('\nrecieved ok from ', idfrom)
+		print('\nreceived ok from ', idfrom)
 		ok = sock.recv(2)
 		myid = struct.unpack('!H', ok)[0]
 		print('\nmy id is: ',myid)
-		'''ok = sock.recv(2)
-		numseq = struct.unpack('!H', ok)[0]''' # recebe o numero de sequencia
+		ok = sock.recv(2)
+		numseq = struct.unpack('!H', ok)[0] # recebe o numero de sequencia
 
 	print('Escolha uma opcao: ')
 	print('[1] Enviar uma mensagem\n' + \
@@ -56,15 +56,15 @@ def main():
 					idfrom = struct.unpack('!H', msg)[0]
 					msg = sock.recv(2)
 					dst = struct.unpack('!H', msg)[0]
-					if myid == dst:
-						print('ta certo')
+					#if myid == dst:
+					#	print('ta certo')
 					msg = sock.recv(2) # recebe o numero de sequencia
 					msg = sock.recv(2)
 					length = struct.unpack('!H', msg)[0]
 					msg = sock.recv(length)
 					mensagem = msg.decode()
-					print('Mensagem de ', idfrom)
-					print(mensagem)
+					print('Mensagem de', idfrom,':')
+					print('>>>', mensagem)
 
 			else: # mensagem do teclado
 				cmd = input()
@@ -87,12 +87,12 @@ def main():
 					if msg_type == 1: # OK
 						print('OK')
 						aux = sock.recv(4)
-						'''aux = sock.recv(2)''' #recebe numero de sequencia
+						aux = sock.recv(2) #recebe numero de sequencia
 
 					elif msg_type == 2:
 						print('ERRO. NAO EXISTE ESSE CLIENTE')
 						aux = sock.recv(4)
-						'''aux = sock.recv(2)''' #recebe numero de sequencia
+						aux = sock.recv(2) #recebe numero de sequencia
 
 				elif cmd == '2': # pede a lista de clientes
 					print('entrou 2')
@@ -100,6 +100,17 @@ def main():
 					struct.pack('!H', 1)
 					sock.send(creq)
 					# esperar pelo clist e mandar um ok
+					aux = sock.recv(2)
+					msg_type = struct.unpack('!H', aux)[0]
+					if msg_type == 7:
+						aux = sock.recv(6)
+						aux = sock.recv(2)
+						length = struct.unpack('!H', aux)[0]
+						aux = sock.recv(length*2)
+						#cl = pickle.loads(aux)
+						cl = struct.unpack('{}H'.format(length),aux)
+						clist = ', '.join([str(x) for x in cl])
+						print('Lista de clientes:', clist)
 					# ver se o numero de sequencia tem que mudar aqui
 
 				elif cmd == '3': # sai do sistema

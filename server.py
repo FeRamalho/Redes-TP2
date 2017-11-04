@@ -3,6 +3,7 @@ import socket
 import sys
 import queue
 import struct
+#import pickle
 
 ## main function ##
 def main():
@@ -133,7 +134,14 @@ def main():
 					if msg_type == 6:
 						print('CREQ')
 						length = len(clients)
-						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
+						cl = list(clients.keys())
+						print('LISTA:', cl)
+						#ls = pickle.dumps(cl)
+						#clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
+						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
+						struct.pack('!H', seq_num) + struct.pack('!H', length) + struct.pack('{}H'.format(length), *cl)
+						#clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
+						#struct.pack('!H', seq_num) + struct.pack('!H', length) + ls
 						message_queues[s].put(clist)
 						# SEND CLIST(origem)
 					
