@@ -1,0 +1,55 @@
+\documentclass[10pt]{article}
+
+% Packages used
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\title{\LARGE \textbf{\uppercase{REDES DE COMPUTADORES\\Trabalho prático 2}} }
+\date{2 de setembro 2017}
+\author{Rafael Rubbioli : 2014124838\\
+\and Fernanda Ramalho : 2014106368 \\ Departamento de Ciência da computação, UFMG}
+\begin{document}
+	\maketitle 
+	\section{Introdução}
+	Este trabalho tem como objetivo a implementação de uma aplicação de troca de mensagens. Para tal, será usado um servidor e clientes TCP/IP.
+	\section{Conceitos e ferramentas de apoio}
+	\subsection{Sockets}	
+	O programa é implementado na linguagem Python e usa sockets para fazer a comunicação. Sockets são usados para conectar clientes a uma porta e trocar mensagens. Isso ocorre em um processo chamado de abertura passiva e abertura ativa. O servidor faz a abertura passiva com o 'bind' e 'listen' e espera as conexões de clientes com 'accept'. Já os clientes fazem 'connect' no porto designado. Depois disso a troca de mensagens pode acontecer normalmente.
+	\subsection{Select}
+	A leitura de entrada pelo teclado e as funções de 'send()' e 'recv()' fazem com que o programa pare e espere uma resposta. Como a aplicação de chat não pode parar fazemos o uso de uma função chamada select. Essa função retorna as listas de possíveis inputs, outputs e exceções. Com isso, não é preciso esperar e deixar o programa parado, basta tratarmos todos as entradas e saídas a medida que elas acontecem.
+	\section{Implementação}
+	A implementação foi simples depois que o select estava funcionando. As maiores dificuldades encontradas foram para tratar a lista de IDs dos clientes. Para resolver esse problema usamos um 'dict' do python que relaciona 2 entidades, no caso o socket com o seu ID. 
+	\newline Outra dificuldade encontrada foi o recebimento de mensagens em network byte order. Em python, precisamos usar as funções 'struct.pack' e 'struct.unpack' para fazer essa converção, mas isso gera um 'string' que seria mais difícil de tratar, por isso usamos python3 que transforma isso em bytes, que facilita no tratamento. Isso, porém, gerou um problema para enviar o 'string' da mensagem tivemos que transformá-lo em bytes para concatenar com o restante da mensagem que havia sido transformada pelo 'struct.pack', para isso foi preciso fazer o '.encode' e o '.decode' ao enviar e receber esse string. Por fim, foi uma questão de balancear os pontos positivos e, decidimos manter o python3.
+	
+	\subsection{Cabeçalho}
+	O cabeçalho das mensagens é divido da seguinte maneira
+	\begin{enumerate}
+		\item[]\textbf{TIPO} Tipo da mensagem. Divido de 1 a 7. 2 bytes.
+		\item[]\textbf{ORIGEM} ID do cliente que enviou a mensagem. 2 bytes.
+		\item[]\textbf{DESTINO} ID do cliente que a mensagem deve ser enviada. 2 bytes.
+		\item[]\textbf{NÚMERO DE SEQUÊNCIA} Número de sequência para controle dos acknolegements enviados. 2 bytes.
+	\end{enumerate}
+	\subsection{Mensagens}
+	As mensagens implementadas para o funcionamento do programa foram:
+	\begin{enumerate}
+		\item[]\textbf{1 = OK} Mensagem de acknolegement confirmando a recepção da mensagem de número de sequência do igual ao do cabeçalho.
+		\item[]\textbf{2 = ERRO} Mensagem semelhante ao OK, porém dizendo que algo deu errado na mensagem do número de sequência indicado.
+		\item[]\textbf{3 = OI} Mensagem que o cliente deve enviar ao criar conexão para receber seu identificador ID. Essa mensagem tem a origem como 0 e o destino o servidor (que tem o identificador 65535).
+		\item[]\textbf{4 = FLW} Mensagem que o cliente deve enviar para sair da conexão com o servidor. Essa mensagem espera um OK antes de permitir que o cliente seja desconectado.
+		\item[]\textbf{5 = MENSAGEM} Essa é a mensagem de chat própriamente dita. Ela pode ser feita de 2 maneiras diferentes, o destino sendo 0 significa um 'broadcast', ou seja, todos os clientes conectados receberão, ou o destino como um ID válido indica que é um 'unicast' para um certo cliente. Essa mensagem espera uma confirmação OK e tem seu cabeçalho extendido com o campo LENGTH de 2 bytes que indica quantos bytes deverão ser lidos de 'payload'.
+		\item[]\textbf{6 = CREQ} Mensagem que o cliente envia para o servidor requerendo a lista de clientes. Essa mensagem espera uma confirmação CLIST.
+		\item[]\textbf{7 = CLIST} Mensagem de resposta do servidor ao CREQ com o tamanho da lista de IDs dos clientes e a lista em si.
+	\end{enumerate}	 
+	\section{Funcionamento}
+	Para rodar a aplicação deve ser feito da seguinte maneira:
+	\newline python3 server.py <porto>
+	\newline Já os clientes devem ser rodados assim:
+	\newline python3 client.py <IP do server> <porto>
+	\section{Testes}
+	Com aplicações como essa, a maneira mais simples de testar é apenas usando. Por isso, fizemos testes manualmente com intuito de gerar erros. A corretude do programa foi verificada e não encontramos erros.
+	\section{Conclusão}
+	Fizemos uma aplicação de mensagem e fizemos uso das ferramentas de socket já conhecidas tanto quanto as novas como o 'select'. Verificamos, também, que em python, como é uma linguagem dinâmicamente tipada, é extremamente mais simples fazer uso dos sockets, pois como vimos em C nos trabalhos anteriores era necessário fazer casts e uso de coerções que tornava muito mais complexo o uso dessas ferramentas.
+\end{document}
