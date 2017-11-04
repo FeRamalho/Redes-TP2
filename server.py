@@ -143,6 +143,7 @@ def main():
 						#clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
 						#struct.pack('!H', seq_num) + struct.pack('!H', length) + ls
 						message_queues[s].put(clist)
+						
 						# SEND CLIST(origem)
 					
 				else:
