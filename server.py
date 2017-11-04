@@ -73,8 +73,8 @@ def main():
 					# 3 = OI #
 					if msg_type == 3:
 						# ok #						
-						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', next_id) + struct.pack('!H', seq_num)
-						message_queues[s].put(msg) 
+						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', next_id) + struct.pack('!H', seq_num)
+						message_queues[s].put(ok) 
 						clients[next_id] = s
 						next_id = next_id + 1
 						'''if nex_id >= 65535:
@@ -86,14 +86,8 @@ def main():
 					# 4 = FLW #
 					if msg_type == 4:
 						# ok #
-						msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-						message_queues[s].put(msg) 
-						# remove s #						
-						inputs.remove(s)
-						if s in outputs:
-							outputs.remove(s)
-						s.close()
-						del clients[origem]
+						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+						message_queues[s].put(ok) 
 					
 					# 5 = MSG #
 					if msg_type == 5:					
@@ -104,35 +98,43 @@ def main():
 						# se o destino = 0 , SEND broadcast
 						if destino == 0:
 							print('broadcast')
-							message = struct.pack('!H', origem) + payload
+							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
+							# add output for response #					
+							for client in clients:
+								if client not in outputs:
+									outputs.append(clients[client])
+									
 							for ppl in outputs:
 								if ppl != clients[origem]:
 									message_queues[ppl].put(message)	
 								else:
 									# SEND OK(origem)
-									msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-									message_queues[ppl].put(msg) 
+									ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+									message_queues[ppl].put(ok) 
 								
 						# se o destino nao existe, SEND ERRO(origem)
 						elif destino not in clients:
 							print('erro')
-							message = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-							message_queues[s].put(message)
+							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
 						else:
-							print('unicast')
+							print('unicast para:', s)
 							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
+							# add output for response #					
+							if clients[destino] not in outputs:
+									outputs.append(clients[destino])
 							message_queues[clients[destino]].put(message)
 							# SEND OK(origem)
-							msg = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-							message_queues[s].put(msg) 
+							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+							message_queues[s].put(ok) 
 								
 					# 6 = CREQ #
 					if msg_type == 6:
 						print('CREQ')
 						length = len(clients)
-						message = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
-						message_queues[s].put(message)
+						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
+						message_queues[s].put(clist)
 						# SEND CLIST(origem)
 					
 				else:
@@ -143,7 +145,8 @@ def main():
 						outputs.remove(s)
 					inputs.remove(s)
 					s.close()
-
+					# Remove socket #
+					del clients[origem]
 		            # Remove message queue #
 					del message_queues[s]
 
