@@ -3,7 +3,6 @@ import socket
 import sys
 import queue
 import struct
-#import pickle
 
 ## main function ##
 def main():
@@ -30,11 +29,11 @@ def main():
 	# Client list #
 	clients = {}
 
+	# nickname list #
+	apelidos = {}
+	
 	# next id #
 	next_id = 1
- 
-	# server id #
-	server_id = 65535
 
 	# Outgoing message queues (socket:Queue) #
 	message_queues = {}
@@ -78,17 +77,20 @@ def main():
 						message_queues[s].put(ok) 
 						clients[next_id] = s
 						next_id = next_id + 1
-						'''if nex_id >= 65535:
-							next_id = 0
-						if clients[next_id] != 0:
-							next_id = next_id + 1
-						if clients[next_id] == 0'''
 
 					# 4 = FLW #
-					if msg_type == 4:
+					elif msg_type == 4:
 						# ok #
 						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(ok) 
+					
+					# 15 = MSGAP #
+					elif msg_type == 15:
+						aux = s.recv(2)
+						apelido_size = struct.unpack('!H', aux)[0]
+						nickname = s.recv(apelido_size) # string com encode()
+						destino = clients[ apelidos[nickname] ]
+						msg_type = 5
 					
 					# 5 = MSG #
 					if msg_type == 5:					
@@ -98,8 +100,7 @@ def main():
 							
 						# se o destino = 0 , SEND broadcast
 						if destino == 0:
-							print('broadcast')
-							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
+							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', 0) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
 							# add output for response #					
 							for client in clients:
 								if client not in outputs:
@@ -115,12 +116,10 @@ def main():
 								
 						# se o destino nao existe, SEND ERRO(origem)
 						elif destino not in clients:
-							print('erro')
 							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
 						else:
-							print('unicast para:', s)
 							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
 							# add output for response #					
 							if clients[destino] not in outputs:
@@ -128,24 +127,52 @@ def main():
 							message_queues[clients[destino]].put(message)
 							# SEND OK(origem)
 							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-							message_queues[s].put(ok) 
-								
+							message_queues[s].put(ok)
+							# RECV OK(destino)
+							clients[destino].settimeout(5)
+							aux = clients[destino].recv(2)
+							ok = struct.unpack('!H', aux)
+							if ok == 1:
+								aux = clients[destino].recv(4)
+								aux = clients[destino].recv(2)
+								confirmacao = struct.unpack('!H', aux)
+							else:
+								if s in outputs:
+									outputs.remove(clients[destino])
+								inputs.remove(clients[destino])
+								clients[destino].close()
+								# Remove socket #
+								del clients[destino]
+		            			# Remove message queue #
+								del message_queues[s]
+					
+							clients[destino].settimeout(None)
+
 					# 6 = CREQ #
-					if msg_type == 6:
-						print('CREQ')
+					elif msg_type == 6:
+						# SEND CLIST(origem)						
 						length = len(clients)
 						cl = list(clients.keys())
-						print('LISTA:', cl)
-						#ls = pickle.dumps(cl)
-						#clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num) + struct.pack('!H', length) + clients
 						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
 						struct.pack('!H', seq_num) + struct.pack('!H', length) + struct.pack('{}H'.format(length), *cl)
-						#clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
-						#struct.pack('!H', seq_num) + struct.pack('!H', length) + ls
 						message_queues[s].put(clist)
-						
-						# SEND CLIST(origem)
 					
+					# 13 = OIAP #
+					elif msg_type == 13:
+						aux = s.recv(2)
+						size = struct.unpack('!H', aux)[0]
+						nickname = s.recv(size) # string com encode()
+						apelidos[origem] = nickname
+						# ok #
+						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+						message_queues[s].put(ok) 
+						
+					# 16 = CREQAP #
+					#if msg_type == 16:
+						#clistap = struct.pack('!H', 17) + struct.pack('!H', 65535) + struct.pack('!H', origem)  # + como mandar a lista de strings
+						#message_queues[s].put(clistap)
+						
+
 				else:
 		        	# Interpret empty result as closed connection #
 					print('closing', client_address, 'after reading no data')
