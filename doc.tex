@@ -44,11 +44,19 @@
 		\item[]\textbf{7 = CLIST} Mensagem de resposta do servidor ao CREQ com o tamanho da lista de IDs dos clientes e a lista em si.
 	\end{enumerate}	 
 	\subsection{Servidor}
-	O servidor tem a função de receber as mensagens e repassá-las entre os seus clientes. blablabla
+	O servidor tem a função de receber as mensagens e repassá-las entre os seus clientes. Para o controle disso, ele usa o número de sequência, assim como as confirmações 'OK' e 'ERRO'. Outra funcionalidade importante do servidor é controlar a lista dos clientes conectados bem quanto seus respectivos IDs. Além disso, ele controla falhas de clientes, de maneira que, caso o cliente demore mais do que 5 segundos para responder, ele desconecta aquele cliente pois acredita que ele sofreu algum erro.
 	\subsection{Cliente}
 	Como descrito na especificação, o cliente é capaz de receber mensagens da rede e exibi-las na tela e ler mensagens do teclado e mandá-las pela rede.
 	\newline Inicialmente, o cliente se conecta com o servidor, manda um OI e espera por um OK de volta. Assim que recebe a confirmação, recebe também o seu ID próprio e mostra na tela. 
 	\newline Depois, o cliente tem a opção de enviar mensagem, listar todos os clientes que estão conectados no servidor ou sair do sistema.
+	\section{Funcionalidades Extras}
+	Foi implementada uma lista de apelidos para tornar a aplicação mais prática. Isso adicionou os seguintes tipos de mensagens:
+	\begin{enumerate}
+		\item[] \textbf{13 OIAP} Mensagem na qual o cliente envia o seu novo apelido.
+		\item[] \textbf{15 MSGAP} Mensagem de troca entre clientes comum, porém o destino é o servidor e existe um campo 'length' de dois bytes que mede o tamanho do apelido e logo em seguida o campo 'nickname' com o apelido do destino.
+		\item[] \textbf{16 CREQAP} Requisição do cliente com a lista de apelidos e seus respectivos IDs.
+		\item[] \textbf{17 CLISTAP} Resposta para a mensagem 16 com a lista de apelidos e seus respectivos IDs dos clientes.
+	\end{enumerate}
 	\section{Funcionamento}
 	Para rodar a aplicação deve ser feito da seguinte maneira:
 	\newline python3 server.py <porto>
