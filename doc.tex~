@@ -43,12 +43,6 @@
 		\item[]\textbf{6 = CREQ} Mensagem que o cliente envia para o servidor requerendo a lista de clientes. Essa mensagem espera uma confirmação CLIST.
 		\item[]\textbf{7 = CLIST} Mensagem de resposta do servidor ao CREQ com o tamanho da lista de IDs dos clientes e a lista em si.
 	\end{enumerate}	 
-	\subsection{Servidor}
-	O servidor tem a função de receber as mensagens e repassá-las entre os seus clientes. blablabla
-	\subsection{Cliente}
-	Como descrito na especificação, o cliente é capaz de receber mensagens da rede e exibi-las na tela e ler mensagens do teclado e mandá-las pela rede.
-	\newline Inicialmente, o cliente se conecta com o servidor, manda um OI e espera por um OK de volta. Assim que recebe a confirmação, recebe também o seu ID próprio e mostra na tela. 
-	\newline Depois, o cliente tem a opção de enviar mensagem, listar todos os clientes que estão conectados no servidor ou sair do sistema.
 	\section{Funcionamento}
 	Para rodar a aplicação deve ser feito da seguinte maneira:
 	\newline python3 server.py <porto>
