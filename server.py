@@ -77,15 +77,19 @@ def main():
 						message_queues[s].put(ok) 
 						clients[next_id] = s
 						next_id = next_id + 1
-
+					
+					elif clients[origem] != s.getpeername():
+						erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+						message_queues[s].put(erro)
+					
 					# 4 = FLW #
-					elif msg_type == 4:
+					if msg_type == 4:
 						# ok #
 						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(ok) 
 					
 					# 15 = MSGAP #
-					elif msg_type == 15:
+					if msg_type == 15:
 						aux = s.recv(2)
 						apelido_size = struct.unpack('!H', aux)[0]
 						nickname = s.recv(apelido_size) # string com encode()
@@ -109,13 +113,14 @@ def main():
 							for ppl in outputs:
 								if ppl != clients[origem]:
 									message_queues[ppl].put(message)	
+										########################### quando arrumar o timeout tem que por aqui tambem
 								else:
 									# SEND OK(origem)
 									ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 									message_queues[ppl].put(ok) 
 								
 						# se o destino nao existe, SEND ERRO(origem)
-						elif destino not in clients:
+						if destino not in clients:
 							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
@@ -128,6 +133,7 @@ def main():
 							# SEND OK(origem)
 							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(ok)
+################################################################################	TIMEOUT BUGADO						
 							# RECV OK(destino)
 							clients[destino].settimeout(5)
 							aux = clients[destino].recv(2)
@@ -145,11 +151,10 @@ def main():
 								del clients[destino]
 		            			# Remove message queue #
 								del message_queues[s]
-					
 							clients[destino].settimeout(None)
-
+###############################################################################
 					# 6 = CREQ #
-					elif msg_type == 6:
+					if msg_type == 6:
 						# SEND CLIST(origem)						
 						length = len(clients)
 						cl = list(clients.keys())
@@ -158,7 +163,7 @@ def main():
 						message_queues[s].put(clist)
 					
 					# 13 = OIAP #
-					elif msg_type == 13:
+					if msg_type == 13:
 						aux = s.recv(2)
 						size = struct.unpack('!H', aux)[0]
 						nickname = s.recv(size) # string com encode()
