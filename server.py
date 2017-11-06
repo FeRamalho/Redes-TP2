@@ -31,9 +31,12 @@ def main():
 
 	# nickname list #
 	apelidos = {}
-	
+
 	# next id #
 	next_id = 1
+ 
+	# server id #
+	#server_id = 65535
 
 	# Outgoing message queues (socket:Queue) #
 	message_queues = {}
@@ -77,34 +80,46 @@ def main():
 						message_queues[s].put(ok) 
 						clients[next_id] = s
 						next_id = next_id + 1
-					
-					elif clients[origem] != s.getpeername():
+						
+					'''elif clients[origem] != s.getpeername():
+						print("NETROU")
+						print('CLIENTE: ', clients[origem])
+						print('CLI ORIGEM: ',origem)
+						print('PEERNAMe: ', s.getpeername())
 						erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-						message_queues[s].put(erro)
-					
+						message_queues[s].put(erro)'''
+
 					# 4 = FLW #
 					if msg_type == 4:
 						# ok #
 						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(ok) 
-					
+
 					# 15 = MSGAP #
 					if msg_type == 15:
 						aux = s.recv(2)
 						apelido_size = struct.unpack('!H', aux)[0]
 						nickname = s.recv(apelido_size) # string com encode()
-						destino = clients[ apelidos[nickname] ]
+						nickname = nickname.decode()
+						view = apelidos.values()
+						values = list(view)
+						for key, nick in apelidos.items():
+							if nick == nickname:
+								destino = key
+						if nickname not in apelidos.values():
+							destino = 65550
 						msg_type = 5
 					
 					# 5 = MSG #
-					if msg_type == 5:					
+					if msg_type == 5:				
 						aux = s.recv(2)
 						size = struct.unpack('!H', aux)[0]
 						payload = s.recv(size) # string com encode()
 							
 						# se o destino = 0 , SEND broadcast
 						if destino == 0:
-							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', 0) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
+							print('broadcast')
+							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
 							# add output for response #					
 							for client in clients:
 								if client not in outputs:
@@ -112,19 +127,21 @@ def main():
 									
 							for ppl in outputs:
 								if ppl != clients[origem]:
-									message_queues[ppl].put(message)	
-										########################### quando arrumar o timeout tem que por aqui tambem
+									message_queues[ppl].put(message)
+									########################### quando arrumar o timeout tem que por aqui tambem	
 								else:
 									# SEND OK(origem)
 									ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 									message_queues[ppl].put(ok) 
 								
 						# se o destino nao existe, SEND ERRO(origem)
-						if destino not in clients:
+						elif destino not in clients:
+							print('erro')
 							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
 						else:
+							print('unicast para:', s)
 							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
 							# add output for response #					
 							if clients[destino] not in outputs:
@@ -132,10 +149,10 @@ def main():
 							message_queues[clients[destino]].put(message)
 							# SEND OK(origem)
 							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-							message_queues[s].put(ok)
+							message_queues[s].put(ok) 
 ################################################################################	TIMEOUT BUGADO						
 							# RECV OK(destino)
-							clients[destino].settimeout(5)
+							'''clients[destino].settimeout(5)
 							aux = clients[destino].recv(2)
 							ok = struct.unpack('!H', aux)
 							if ok == 1:
@@ -151,33 +168,47 @@ def main():
 								del clients[destino]
 		            			# Remove message queue #
 								del message_queues[s]
-							clients[destino].settimeout(None)
+							clients[destino].settimeout(None)'''
 ###############################################################################
+								
 					# 6 = CREQ #
 					if msg_type == 6:
-						# SEND CLIST(origem)						
 						length = len(clients)
 						cl = list(clients.keys())
+						print('LISTA:', cl)
 						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
 						struct.pack('!H', seq_num) + struct.pack('!H', length) + struct.pack('{}H'.format(length), *cl)
 						message_queues[s].put(clist)
-					
+						
+						# SEND CLIST(origem)
+
 					# 13 = OIAP #
 					if msg_type == 13:
 						aux = s.recv(2)
 						size = struct.unpack('!H', aux)[0]
 						nickname = s.recv(size) # string com encode()
+						nickname = nickname.decode()
 						apelidos[origem] = nickname
 						# ok #
 						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(ok) 
 						
 					# 16 = CREQAP #
-					#if msg_type == 16:
-						#clistap = struct.pack('!H', 17) + struct.pack('!H', 65535) + struct.pack('!H', origem)  # + como mandar a lista de strings
-						#message_queues[s].put(clistap)
+					if msg_type == 16:
+						lengthtot = len(apelidos)
+						apl = list(apelidos.keys())
+						ap = list(apelidos.values())
+						clistap = struct.pack('!H', 17) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
+						struct.pack('!H', seq_num) + struct.pack('!H', lengthtot) + struct.pack('{}H'.format(lengthtot), *apl)
+						x = 0
+						while x<lengthtot:
+							length = len(ap[x])
+							nick = ap[x].encode()
+							clistap += struct.pack('!H', length) + nick
+							x += 1
 						
-
+						message_queues[s].put(clistap)
+					
 				else:
 		        	# Interpret empty result as closed connection #
 					print('closing', client_address, 'after reading no data')
@@ -188,6 +219,7 @@ def main():
 					s.close()
 					# Remove socket #
 					del clients[origem]
+					del apelidos[origem]
 		            # Remove message queue #
 					del message_queues[s]
 
@@ -216,4 +248,4 @@ def main():
 			del message_queues[s]
 
 if __name__ == "__main__":
-    main()
+	main()
