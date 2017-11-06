@@ -36,7 +36,9 @@ def main():
 		sys.exit()
 
 	nickname = input('Deseja ter um apelido? s/n ')
-	if nickname == 's': #manda OIAP
+	#if nickname == 's': #manda OIAP
+	msg_type = 0
+	while nickname == 's' and msg_type != 1:
 		mynick = input('Digite o apelido: ')
 		print(mynick)
 		nicklen = len(mynick)
@@ -51,6 +53,7 @@ def main():
 		ok = sock.recv(6)
 		if msg_type != 1:
 			print('Não foi possivel guardar o apelido')
+			nickname = input('Deseja ter um apelido? s/n ')
 
 	print('Escolha uma opcao: ')
 	print('[1] Enviar uma mensagem\n' + \
@@ -108,9 +111,10 @@ def main():
 						sock.send(msg)
 					else: #usando apelido
 						dst = input('Apelido do destino: ')
-						while dst == mynick:
-							print('Nao mande mensagem para você mesmo')
-							dst = input('Apelido do destino: ')
+						if nickname == 's':
+							while dst == mynick:
+								print('Nao mande mensagem para você mesmo')
+								dst = input('Apelido do destino: ')
 						mensagem = input('Mensagem: ')
 						#mandar a msg
 						menlen = len(mensagem)
