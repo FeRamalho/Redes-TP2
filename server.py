@@ -136,7 +136,7 @@ def main():
 								
 						# se o destino nao existe, SEND ERRO(origem)
 						elif destino not in clients:
-							print('erro')
+							# ERRO #
 							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
@@ -188,16 +188,21 @@ def main():
 						size = struct.unpack('!H', aux)[0]
 						nickname = s.recv(size) # string com encode()
 						nickname = nickname.decode()
-						apelidos[origem] = nickname
-						# ok #
-						ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-						message_queues[s].put(ok) 
-						
+						if nickname not in apelidos:					
+							apelidos[nickname] = origem
+							# OK #
+							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+							message_queues[s].put(ok) 
+						else:
+							# ERRO #
+							erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
+							message_queues[s].put(erro)
+
 					# 16 = CREQAP #
 					if msg_type == 16:
 						lengthtot = len(apelidos)
-						apl = list(apelidos.keys())
-						ap = list(apelidos.values())
+						apl = list(apelidos.values())
+						ap = list(apelidos.keys())
 						clistap = struct.pack('!H', 17) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
 						struct.pack('!H', seq_num) + struct.pack('!H', lengthtot) + struct.pack('{}H'.format(lengthtot), *apl)
 						x = 0
@@ -219,7 +224,9 @@ def main():
 					s.close()
 					# Remove socket #
 					del clients[origem]
-					del apelidos[origem]
+
+					if origem in apelidos:
+						print('deu') #del apelidos[origem]
 		            # Remove message queue #
 					del message_queues[s]
 
@@ -247,5 +254,11 @@ def main():
 		    # Remove message queue #
 			del message_queues[s]
 
+			# Remove apelido #
+			if clients[s] in apelidos.values():
+				#del apelidos[x] = 1)
+				print('deu2')
+			# Remove ID #
+			del clients[origem]
 if __name__ == "__main__":
 	main()
