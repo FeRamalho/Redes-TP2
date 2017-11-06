@@ -82,8 +82,6 @@ def main():
 						next_id = next_id + 1
 						
 					elif clients[origem] != s:
-						print('CLIENTE: ', clients[origem])
-						print('PEERNAMe: ', s.getpeername())
 						erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 						message_queues[s].put(erro)
 
@@ -149,24 +147,7 @@ def main():
 							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(ok) 
 ################################################################################	TIMEOUT BUGADO						
-							# RECV OK(destino)
-							'''clients[destino].settimeout(5)
-							aux = clients[destino].recv(2)
-							ok = struct.unpack('!H', aux)
-							if ok == 1:
-								aux = clients[destino].recv(4)
-								aux = clients[destino].recv(2)
-								confirmacao = struct.unpack('!H', aux)
-							else:
-								if s in outputs:
-									outputs.remove(clients[destino])
-								inputs.remove(clients[destino])
-								clients[destino].close()
-								# Remove socket #
-								del clients[destino]
-		            			# Remove message queue #
-								del message_queues[s]
-							clients[destino].settimeout(None)'''
+							
 ###############################################################################
 								
 					# 6 = CREQ #
@@ -243,7 +224,24 @@ def main():
 			else:
 				print('sending to', s.getpeername())  
 				s.send(next_msg)
-
+			''' if next_msg_type == 5 # tem q descobrir como separa o next_msg igual era antes pra saber o tipo dele		
+					# RECV OK(destino)
+					s.settimeout(5)
+					aux = s.recv(2)
+					ok = struct.unpack('!H', aux)
+					if ok == 1: # tem que ver se isso ja basta pra ver se deu timeout ou não pq podia ta vindo outra msg do S
+						aux = s.recv(6)
+						s.settimeout(None)
+					else:
+						if s in outputs:
+							outputs.remove(s)
+						inputs.remove(s)
+						s.close()
+						# Remove socket #
+						del clients[] = s #tem que descobrir como remover esse aqui
+						# Remove message queue #
+						del message_queues[s]
+'''
 		# Handle "exceptional conditions" #
 		for s in exceptional:
 			print('handling exceptional condition for', s.getpeername())
