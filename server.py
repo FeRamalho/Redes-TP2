@@ -13,7 +13,7 @@ def main():
 	server.setblocking(0)
 
 	# Bind the socket to the port #
-	server_address = ('localhost', int(port))	
+	server_address = ("", int(port))	
 	print('starting up on localhost port', int(port))
 	server.bind(server_address)
 
@@ -81,13 +81,11 @@ def main():
 						clients[next_id] = s
 						next_id = next_id + 1
 						
-					'''elif clients[origem] != s.getpeername():
-						print("NETROU")
+					elif clients[origem] != s:
 						print('CLIENTE: ', clients[origem])
-						print('CLI ORIGEM: ',origem)
 						print('PEERNAMe: ', s.getpeername())
 						erro = struct.pack('!H', 2) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
-						message_queues[s].put(erro)'''
+						message_queues[s].put(erro)
 
 					# 4 = FLW #
 					if msg_type == 4:
