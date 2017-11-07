@@ -124,6 +124,7 @@ def main():
 							for ppl in outputs:
 								if ppl != clients[origem]:
 									message_queues[ppl].put(message)
+									########################### quando arrumar o timeout tem que por aqui tambem	
 								else:
 									# SEND OK(origem)
 									ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
@@ -136,7 +137,7 @@ def main():
 							message_queues[s].put(erro)
 						# se nao e nada disso, SEND(destino) 
 						else:
-							print('unicast')
+							print('unicast para:', s)
 							message = struct.pack('!H', 5) + struct.pack('!H', origem) + struct.pack('!H', destino) + struct.pack('!H', seq_num) + struct.pack('!H', size) + payload
 							# add output for response #					
 							if clients[destino] not in outputs:
@@ -145,11 +146,15 @@ def main():
 							# SEND OK(origem)
 							ok = struct.pack('!H', 1) + struct.pack('!H', 65535) + struct.pack('!H', origem) + struct.pack('!H', seq_num)
 							message_queues[s].put(ok) 
+################################################################################	TIMEOUT BUGADO						
+							
+###############################################################################
 								
 					# 6 = CREQ #
 					if msg_type == 6:
 						length = len(clients)
 						cl = list(clients.keys())
+						print('LISTA:', cl)
 						clist = struct.pack('!H', 7) + struct.pack('!H', 65535) + struct.pack('!H', origem) + \
 						struct.pack('!H', seq_num) + struct.pack('!H', length) + struct.pack('{}H'.format(length), *cl)
 						message_queues[s].put(clist)
@@ -219,39 +224,24 @@ def main():
 			else:
 				print('sending to', s.getpeername())  
 				s.send(next_msg)
-				val = next_msg[:2]
-				val = struct.unpack('!H',val)
-				next_msg_type = val[0]
-				dst = next_msg[4:6]
-				dst = struct.unpack('!H',dst)
-				a = dst[0]
-				if dst[0] == 0:
-					for x in clients:
-						if clients[x] == s:
-							a = x
-				################################################################
-				if next_msg_type == 5: # timeout
+			''' if next_msg_type == 5 # tem q descobrir como separa o next_msg igual era antes pra saber o tipo dele		
 					# RECV OK(destino)
 					s.settimeout(5)
-					try:
-						aux = s.recv(2)
-						ok = struct.unpack('!H', aux)[0]
-						if ok == 1:
-							s.settimeout(None)
-							aux = s.recv(6)
-					except socket.timeout:
+					aux = s.recv(2)
+					ok = struct.unpack('!H', aux)
+					if ok == 1: # tem que ver se isso ja basta pra ver se deu timeout ou não pq podia ta vindo outra msg do S
+						aux = s.recv(6)
+						s.settimeout(None)
+					else:
 						if s in outputs:
 							outputs.remove(s)
 						inputs.remove(s)
 						s.close()
 						# Remove socket #
-						if a in apelidos:
-							del apelidos[a]
-						del clients[a]
+						del clients[] = s #tem que descobrir como remover esse aqui
 						# Remove message queue #
 						del message_queues[s]
-						s.settimeout(None)
-
+'''
 		# Handle "exceptional conditions" #
 		for s in exceptional:
 			print('handling exceptional condition for', s.getpeername())

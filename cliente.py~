@@ -4,7 +4,6 @@ import socket
 import sys
 import struct
 import select
-import time
 
 def main():
 	# Create TCP/IP socket
@@ -56,12 +55,10 @@ def main():
 			print('Não foi possivel guardar o apelido')
 			nickname = input('Deseja ter um apelido? s/n ')
 
-	print('\n==============================')
 	print('Escolha uma opcao: ')
 	print('[1] Enviar uma mensagem\n' + \
 		  '[2] Lista de clientes\n' + \
 		  '[3] Sair')
-	print('==============================\n')
 
 
 	while 1:
@@ -74,70 +71,30 @@ def main():
 				msg_type = struct.unpack('!H', msg)[0]
 				if not msg:
 					sys.exit()
-				elif msg_type == 2:
-					print('ERRO. NAO EXISTE ESSE CLIENTE')
-					aux = sock.recv(4)
-					aux = sock.recv(2) #recebe numero de sequencia
-				elif msg_type == 7:
-					aux = sock.recv(6)
-					aux = sock.recv(2)
-					length = struct.unpack('!H', aux)[0]
-					aux = sock.recv(length*2)
-					#cl = pickle.loads(aux)
-					cl = struct.unpack('{}H'.format(length),aux)
-					clist = ', '.join([str(x) for x in cl])
-					print('\n>Lista de clientes:', clist,'\n')
-					# manda OK
-					ok = struct.pack('!H', 1) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
-						struct.pack('!H', numseqprog)
-					sock.send(ok)
 				elif msg_type == 5:
 					msg = sock.recv(2)
 					idfrom = struct.unpack('!H', msg)[0]
 					msg = sock.recv(2)
 					dst = struct.unpack('!H', msg)[0]
 					if myid == dst or dst == 0:
+						print('ta certo')
 						msg = sock.recv(2) # recebe o numero de sequencia
 						msg = sock.recv(2)
 						length = struct.unpack('!H', msg)[0]
 						msg = sock.recv(length)
 						mensagem = msg.decode()
-						print('\nMensagem de', idfrom,':')
-						print('>>>', mensagem, '\n')
+						print('Mensagem de', idfrom,':')
+						print('>>>', mensagem)
 						#manda OK
-						####time.sleep(15)
 						ok = struct.pack('!H', 1) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
-							struct.pack('!H', numseqprog)
+						struct.pack('!H', numseqprog)
 						sock.send(ok)
-				elif msg_type == 17:
-						aux = sock.recv(6)
-						aux = sock.recv(2)
-						lengthtot = struct.unpack('!H', aux)[0]
-						aux = sock.recv(lengthtot*2)
-						cl = struct.unpack('{}H'.format(lengthtot),aux)
-						x=0
-						apelidos = {}
-						while x<lengthtot:
-							aux = sock.recv(2)
-							length = struct.unpack('!H', aux)[0]
-							aux = sock.recv(length)
-							apl = aux.decode()
-							apelidos[cl[x]] = apl
-							x += 1
-						print('\n>Lista de apelidos: ',apelidos,'\n')
-						ok = struct.pack('!H', 1) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
-							struct.pack('!H', numseqprog)
-						sock.send(ok)
-				elif msg_type == 1: # OK
-					aux = sock.recv(4)
-					aux = sock.recv(2) #recebe numero de sequencia
-					if numseqprog == 0:
-						sock.close()
-						sys.exit()
 
 			else: # mensagem do teclado
 				cmd = input()
 				if cmd == '1': # envia mensagem
+					print('entrou 1')
+
 					modo = input('Usar um ID[1], ou usar um apelido[2]: ')
 					if modo == '1':
 						dst = int(input('ID do destino: '))
@@ -152,7 +109,7 @@ def main():
 						struct.pack('!H', numseqprog) + struct.pack('!H', length) + mensagem
 						numseqprog +=1
 						sock.send(msg)
-					elif modo == '2': #usando apelido
+					else: #usando apelido
 						dst = input('Apelido do destino: ')
 						if nickname == 's':
 							while dst == mynick:
@@ -169,15 +126,24 @@ def main():
 						struct.pack('!H', menlen) + mensagem
 						numseqprog +=1
 						sock.send(msg)
-					else:
-						print('Não é um comando válido')
-						print('Escolha uma opcao: ')
-						print('[1] Enviar uma mensagem\n' + \
-		  					  '[2] Lista de clientes\n' + \
-		  					  '[3] Sair')
-						break
+
+					#esperando OK ou ERRO
+					aux = sock.recv(2)
+					msg_type = struct.unpack('!H', aux)[0]
+
+					if msg_type == 1: # OK
+						print('OK')
+						aux = sock.recv(4)
+						aux = sock.recv(2) #recebe numero de sequencia
+
+					elif msg_type == 2:
+						print('ERRO. NAO EXISTE ESSE CLIENTE')
+						aux = sock.recv(4)
+						aux = sock.recv(2) #recebe numero de sequencia
 
 				elif cmd == '2': # pede a lista de clientes
+					print('entrou 2')
+
 					modo = input('Lista de ID[1], ou lista de apelidos[2]: ')
 					if modo == '1':
 						creq = struct.pack('!H', 6) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
@@ -185,25 +151,66 @@ def main():
 						numseqprog += 1
 						sock.send(creq)
 						# esperar pelo clist e mandar um ok
-
+						aux = sock.recv(2)
+						msg_type = struct.unpack('!H', aux)[0]
+						if msg_type == 7:
+							aux = sock.recv(6)
+							aux = sock.recv(2)
+							length = struct.unpack('!H', aux)[0]
+							aux = sock.recv(length*2)
+							#cl = pickle.loads(aux)
+							cl = struct.unpack('{}H'.format(length),aux)
+							clist = ', '.join([str(x) for x in cl])
+							print('Lista de clientes:', clist)
+							# manda OK
+							ok = struct.pack('!H', 1) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
+							struct.pack('!H', numseqprog)
+							sock.send(ok)
 					else: # lista de apelidos
 						creqap = struct.pack('!H', 16) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
 						struct.pack('!H', numseqprog)
 						numseqprog += 1
 						sock.send(creqap)
 						# esperar pelo clistap e mandar um ok
+						aux = sock.recv(2)
+						msg_type = struct.unpack('!H', aux)[0]
+						if msg_type == 17:
+							aux = sock.recv(6)
+							aux = sock.recv(2)
+							lengthtot = struct.unpack('!H', aux)[0]
+							aux = sock.recv(lengthtot*2)
+							cl = struct.unpack('{}H'.format(lengthtot),aux)
+							x=0
+							apelidos = {}
+							while x<lengthtot:
+								aux = sock.recv(2)
+								length = struct.unpack('!H', aux)[0]
+								aux = sock.recv(length)
+								apl = aux.decode()
+								apelidos[cl[x]] = apl
+								x += 1
+							print('Lista de apelidos: ',apelidos)
+
+					# ver se o numero de sequencia tem que mudar aqui
 
 				elif cmd == '3': # sai do sistema
+					print('entrou 3')
 					flw = struct.pack('!H', 4) + struct.pack('!H', myid) + struct.pack('!H', 65535) + \
 					struct.pack('!H', numseqprog)
 					# ver se o numero de sequencia tem que mudar aqui
 					sock.send(flw)
-					numseqprog = 0
+					numseqprog += 1
 
 					# esperando OK
+					aux = sock.recv(2)
+					msg_type = struct.unpack('!H', aux)[0]
+					if msg_type == 1:
+						print('OK')
+						aux = sock.recv(6)
+						sock.close()
+						sys.exit() 
 
 
 
 if __name__ == "__main__":
     main()
-

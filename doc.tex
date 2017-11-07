@@ -23,6 +23,7 @@
 	\section{Implementação}
 	A implementação foi simples depois que o select estava funcionando. As maiores dificuldades encontradas foram para tratar a lista de IDs dos clientes. Para resolver esse problema usamos um 'dict' do python que relaciona 2 entidades, no caso o socket com o seu ID. 
 	\newline Outra dificuldade encontrada foi o recebimento de mensagens em network byte order. Em python, precisamos usar as funções 'struct.pack' e 'struct.unpack' para fazer essa converção, mas isso gera um 'string' que seria mais difícil de tratar, por isso usamos python3 que transforma isso em bytes, que facilita no tratamento. Isso, porém, gerou um problema para enviar o 'string' da mensagem tivemos que transformá-lo em bytes para concatenar com o restante da mensagem que havia sido transformada pelo 'struct.pack', para isso foi preciso fazer o '.encode' e o '.decode' ao enviar e receber esse string. Por fim, foi uma questão de balancear os pontos positivos e, decidimos manter o python3.
+	\newline Outra dificuldade foi a implementação do timeout, já que precisávamos verificar sempre que um cliente mandava uma mensagem e retirá-lo do sistema se fosse necessário. A solução encontrada foi retirar o socket daquele cliente, então quando outros clientes pedem a lista, ele já não está mais nela.
 	
 	\subsection{Cabeçalho}
 	O cabeçalho das mensagens é divido da seguinte maneira
@@ -48,7 +49,10 @@
 	\subsection{Cliente}
 	Como descrito na especificação, o cliente é capaz de receber mensagens da rede e exibi-las na tela e ler mensagens do teclado e mandá-las pela rede.
 	\newline Inicialmente, o cliente se conecta com o servidor, manda um OI e espera por um OK de volta. Assim que recebe a confirmação, recebe também o seu ID próprio e mostra na tela. 
-	\newline Depois, o cliente tem a opção de enviar mensagem, listar todos os clientes que estão conectados no servidor ou sair do sistema.
+	\newline Depois, o cliente tem a opção de enviar mensagem, listar todos os clientes que estão conectados no servidor ou sair do sistema. Caso deseje enviar mensagem, ele tem que indicar o ID do destino e a mensagem. As mensagens fora codificadas com o encode() para mandar e, quando recebe uma mensagem, decode().
+	\newline A opção de listar os clientes apenas manda a requisição para o servidor e recebe, junto com o cabeçalho da mensagem, uma lista com todos os IDs.
+	\newline O cliente, de modo semelhante ao servidor, foi feito para que receba mensagens "ao mesmo tempo". Caso o cliente esteja fazendo uma requisição de lista e ao mesmo tempo estiver recebendo uma mensagem, ele receberá as duas mensagens com os seus respectivos cabeçalhos, nada será perdido. 
+	\newline Por fim, uma modificação foi feita para facilitar o desenvolvimento, quando o cliente envia um FLW, o número de sequência do programa é zerado, assim quando ele receber um OK do servidor fica mais simples de saber de qual requisição aquele OK veio, para poder fechar o socket e sair do programa.
 	\section{Funcionalidades Extras}
 	Foi implementada uma lista de apelidos para tornar a aplicação mais prática. Isso adicionou os seguintes tipos de mensagens:
 	\begin{enumerate}
@@ -57,13 +61,16 @@
 		\item[] \textbf{16 CREQAP} Requisição do cliente com a lista de apelidos e seus respectivos IDs.
 		\item[] \textbf{17 CLISTAP} Resposta para a mensagem 16 com a lista de apelidos e seus respectivos IDs dos clientes.
 	\end{enumerate}
+	 Além das funcionalidades já explicadas, o programa também pergunta ao iniciar se o cliente quer ter um apelido. Assim ele pode mandar mensagens para outros clientes através desse apelido. Caso ele não queira, ainda assim pode solicitar a lista de apelidos e mandar mensagens usando o apelido em vez do ID.
+	 \newline A lista de apelidos contém apenas aqueles clientes que decidiram ter um. Então se temos 3 clientes e só o 2 não quis, a lista vai conter apenas 1 e 2 e os seus respectivos apelidos. Já a lista de ID teria todos os 3.
 	\section{Funcionamento}
 	Para rodar a aplicação deve ser feito da seguinte maneira:
-	\newline python3 server.py <porto>
+	\newline python3 servidor.py <porto>
 	\newline Já os clientes devem ser rodados assim:
-	\newline python3 client.py <IP do server> <porto>
+	\newline python3 cliente.py <IP do server> <porto>
 	\section{Testes}
 	Com aplicações como essa, a maneira mais simples de testar é apenas usando. Por isso, fizemos testes manualmente com intuito de gerar erros. A corretude do programa foi verificada e não encontramos erros.
+	\newline Foram feitos testes mandando mensagens para clientes que nao existem, pedidos de listas, envios broadcast, mensagens que geravam timeout. Uma coisa verificada foi que, mesmo tendo apenas um cliente e ele queira enviar uma mensagem broadcast, não retorna erro, mas pode ser verificado pedindo uma lista, uqe só existe um cliente no sistema.
 	\section{Conclusão}
 	Fizemos uma aplicação de mensagem e fizemos uso das ferramentas de socket já conhecidas tanto quanto as novas como o 'select'. Verificamos, também, que em python, como é uma linguagem dinâmicamente tipada, é extremamente mais simples fazer uso dos sockets, pois como vimos em C nos trabalhos anteriores era necessário fazer casts e uso de coerções que tornava muito mais complexo o uso dessas ferramentas.
 \end{document}
